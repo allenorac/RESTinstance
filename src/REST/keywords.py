@@ -367,7 +367,7 @@ class Keywords(object):
 
     @keyword(name=None, tags=("http",))
     def post(self, endpoint, body=None, timeout=None, allow_redirects=None,
-             validate=True, headers=None):
+             validate=True, headers=None, form=False):
         """*Sends a POST request to the endpoint.*
 
         The endpoint is joined with the URL given on library init (if any).
@@ -395,7 +395,10 @@ class Keywords(object):
         endpoint = self._input_string(endpoint)
         request = deepcopy(self.request)
         request['method'] = "POST"
-        request['body'] = self.input(body)
+        if form:
+            request['body'] = self._form_input(body, headers)
+        else:
+            request['body'] = self.input(body)
         if allow_redirects is not None:
             request['allowRedirects'] = self._input_boolean(allow_redirects)
         if timeout is not None:
@@ -403,7 +406,14 @@ class Keywords(object):
         validate = self._input_boolean(validate)
         if headers:
             request['headers'].update(self._input_object(headers))
-        return self._request(endpoint, request, validate)['response']
+        r = self._request(endpoint, request, validate)['response']
+
+    def _form_input(self, data, headers):
+        if headers and "Content-Type" in headers.keys():
+            if 'application/x-www-form-urlencoded' in headers["Content-Type"]:
+                return data.encode('utf-8')
+            else:
+                return data
 
     @keyword(name=None, tags=("http",))
     def put(self, endpoint, body=None, timeout=None, allow_redirects=None,
@@ -1136,6 +1146,7 @@ class Keywords(object):
             json = self._input_json_from_non_string(what)
         sort_keys = self._input_boolean(sort_keys)
         if not file_path:
+            json = self._filter_bytes(json)
             self.log_json(json, sort_keys=sort_keys)
         else:
             content = dumps(json, ensure_ascii=False, indent=4,
@@ -1210,7 +1221,7 @@ class Keywords(object):
         try:
             response = client(request['method'], request['url'],
                               params=request['query'],
-                              json=request['body'],
+                              data=request['body'],
                               headers=request['headers'],
                               proxies=request['proxies'],
                               cert=request['cert'],
@@ -1223,6 +1234,7 @@ class Keywords(object):
         except Timeout as e:
             raise AssertionError("%s to %s timed out:\n%s" % (
                 request['method'], request['url'], e))
+
         utc_datetime = datetime.now(tz=utc)
         request['timestamp'] = {
             'utc': utc_datetime.isoformat(),
@@ -1293,9 +1305,12 @@ class Keywords(object):
             raise AssertionError(e)
 
     def _new_schema(self, value):
-        builder = SchemaBuilder(schema_uri=False)
-        builder.add_object(value)
-        return builder.to_schema()
+        if type(value) is bytes:
+            return {'type': 'bytes'}
+        else:
+            builder = SchemaBuilder(schema_uri=False)
+            builder.add_object(value)
+            return builder.to_schema()
 
     def _add_defaults_to_schema(self, schema, response):
         body = response['body']
@@ -1421,3 +1436,13 @@ class Keywords(object):
                 "for %s:\n%s" % (json_type, validation))
             schema[validation] = self.input(validations[validation])
         schema.update({ "type": json_type })
+
+    def _filter_bytes(self, json):
+        if type(json) is bytes:
+            return json.decode('utf-8')
+        for key in json.keys():
+            if type(json[key]) is bytes:
+                json[key] = json[key].decode('utf-8')
+            if type(json[key]) is dict:
+                self._filter_bytes(json[key])
+        return json
