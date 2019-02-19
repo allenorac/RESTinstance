@@ -406,7 +406,7 @@ class Keywords(object):
         validate = self._input_boolean(validate)
         if headers:
             request['headers'].update(self._input_object(headers))
-        r = self._request(endpoint, request, validate)['response']
+        return self._request(endpoint, request, validate, form)['response']
 
     def _form_input(self, data, headers):
         if headers and "Content-Type" in headers.keys():
@@ -1207,7 +1207,7 @@ class Keywords(object):
 
     ### Internal methods
 
-    def _request(self, endpoint, request, validate=True):
+    def _request(self, endpoint, request, validate=True, form=False):
         if not endpoint.startswith(('http://', 'https://')):
             base_url = self.request['scheme'] + "://" + self.request['netloc']
             if not endpoint.startswith('/'):
@@ -1219,15 +1219,26 @@ class Keywords(object):
         request['netloc'] = url_parts.netloc
         request['path'] = url_parts.path
         try:
-            response = client(request['method'], request['url'],
-                              params=request['query'],
-                              data=request['body'],
-                              headers=request['headers'],
-                              proxies=request['proxies'],
-                              cert=request['cert'],
-                              timeout=tuple(request['timeout']),
-                              allow_redirects=request['allowRedirects'],
-                              verify=request['sslVerify'])
+            if form:
+                response = client(request['method'], request['url'],
+                                  params=request['query'],
+                                  data=request['body'],
+                                  headers=request['headers'],
+                                  proxies=request['proxies'],
+                                  cert=request['cert'],
+                                  timeout=tuple(request['timeout']),
+                                  allow_redirects=request['allowRedirects'],
+                                  verify=request['sslVerify'])
+            else:
+                response = client(request['method'], request['url'],
+                                  params=request['query'],
+                                  json=request['body'],
+                                  headers=request['headers'],
+                                  proxies=request['proxies'],
+                                  cert=request['cert'],
+                                  timeout=tuple(request['timeout']),
+                                  allow_redirects=request['allowRedirects'],
+                                  verify=request['sslVerify'])
         except SSLError as e:
             raise AssertionError("%s to %s SSL certificate verify failed:\n%s" %
                 (request['method'], request['url'], e))
