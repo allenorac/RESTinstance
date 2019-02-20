@@ -404,6 +404,8 @@ class Keywords(object):
         if timeout is not None:
             request['timeout'] = self._input_timeout(timeout)
         validate = self._input_boolean(validate)
+        if form:
+            request['headers']["Content-Type"] = "application/x-www-form-urlencoded"
         if headers:
             request['headers'].update(self._input_object(headers))
         return self._request(endpoint, request, validate, form)['response']
@@ -1008,7 +1010,7 @@ class Keywords(object):
 
     @keyword(name=None, tags=("I/O",))
     def output_schema(self, what="", file_path=None, append=False,
-                      sort_keys=False):
+                      sort_keys=False, console=False):
         """*Outputs JSON Schema to terminal or a file.*
 
         By default, the schema is output for the last request and response.
@@ -1062,7 +1064,7 @@ class Keywords(object):
             json = self._new_schema(self._input_json_from_non_string(what))
         sort_keys = self._input_boolean(sort_keys)
         if not file_path:
-            self.log_json(json, sort_keys=sort_keys)
+            self.log_json(json, also_console=console, sort_keys=sort_keys)
         else:
             content = dumps(json, ensure_ascii=False, indent=4,
                             separators=(',', ': ' ), sort_keys=sort_keys)
@@ -1150,7 +1152,7 @@ class Keywords(object):
             self.log_json(json, sort_keys=sort_keys)
         else:
             content = dumps(json, ensure_ascii=False, indent=4,
-                            separators=(',', ': ' ), sort_keys=sort_keys)
+                            separators=(',', ': '), sort_keys=sort_keys)
             write_mode = 'a' if self._input_boolean(append) else 'w'
             try:
                 with open(path.join(getcwd(), file_path), write_mode,
