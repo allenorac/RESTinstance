@@ -40,7 +40,7 @@ from requests.exceptions import SSLError, Timeout
 if IS_PYTHON_2:
     from urlparse import parse_qsl, urljoin, urlparse
 else:
-    from urllib.parse import parse_qsl, urljoin, urlparse
+    from urllib.parse import parse_qsl, urljoin, urlparse, urlencode
 
 from robot.api import logger
 from robot.api.deco import keyword
@@ -409,13 +409,6 @@ class Keywords(object):
         if headers:
             request['headers'].update(self._input_object(headers))
         return self._request(endpoint, request, validate, form)['response']
-
-    def _form_input(self, data, headers):
-        if headers and "Content-Type" in headers.keys():
-            if 'application/x-www-form-urlencoded' in headers["Content-Type"]:
-                return data.encode('utf-8')
-            else:
-                return data
 
     @keyword(name=None, tags=("http",))
     def put(self, endpoint, body=None, timeout=None, allow_redirects=None,
@@ -1459,3 +1452,9 @@ class Keywords(object):
             if type(json[key]) is dict:
                 self._filter_bytes(json[key])
         return json
+
+    def _form_input(self, data):
+        if type(data) is dict:
+            urlencode(data)
+        else:
+            return data
