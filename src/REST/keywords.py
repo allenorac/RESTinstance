@@ -396,7 +396,7 @@ class Keywords(object):
         request = deepcopy(self.request)
         request['method'] = "POST"
         if form:
-            request['body'] = self._form_input(body, headers)
+            request['body'] = self._form_input(body)
         else:
             request['body'] = self.input(body)
         if allow_redirects is not None:
