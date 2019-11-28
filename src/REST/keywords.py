@@ -1455,6 +1455,6 @@ class Keywords(object):
 
     def _form_input(self, data):
         if type(data) is dict:
-            urlencode(data)
+            return urlencode(data)
         else:
             return data
